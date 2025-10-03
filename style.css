@@ -255,8 +255,8 @@ body {
 /* 편지 아이콘 (24×24) */
 #letter-icon {
   position: absolute; /* map 기준 좌표로 배치 */
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   background: url("assets/letter.png") no-repeat center/contain;
   opacity: 0;
   pointer-events: none;
