@@ -12,6 +12,7 @@ const collectionBar = document.getElementById("collection-bar");
 const letterIcon = document.getElementById("letter-icon");
 const letterModal = document.getElementById("letter-modal");
 const closeLetterBtn = document.getElementById("close-letter");
+const letterHint = document.getElementById("letter-hint"); // ✨ 힌트 오버레이
 
 const loadingTitle = document.querySelector(".loading-title");
 const loadingText = document.getElementById("loading-subtext");
@@ -122,31 +123,31 @@ function imagePointToContainerXY({ xRatio, yRatio }, containerRect, imgSrc) {
   return { x: offsetX + rw * xRatio, y: offsetY + rh * yRatio };
 }
 
-// ===== 아이템 좌표(비율) =====
+// ===== 아이템 좌표(비율) + 라벨(툴팁용) =====
 const toyData = {
   cake: {
     img: "assets/cake.png",
     className: "",
     init: { xRatio: 0.22, yRatio: 0.7 },
-    label: "Cake",
+    label: "단종되어 사지 못한 테디 스콘",
   },
   cookie: {
     img: "assets/cookie.png",
     className: "toy--cookie",
     init: { xRatio: 0.55, yRatio: 0.46 },
-    label: "Cookie",
+    label: "테디 쿠키",
   },
   lamp: {
     img: "assets/lamp.png",
     className: "toy--lamp",
     init: { xRatio: 0.73, yRatio: 0.91 },
-    label: "Lamp",
+    label: "팬들이 주로 만드는 무드등",
   },
   lp: {
     img: "assets/lp.png",
     className: "",
     init: { xRatio: 0.78, yRatio: 0.1 },
-    label: "LP",
+    label: "옷장 속에 함참 있던 LP",
   },
 };
 const totalItems = Object.keys(toyData).length;
@@ -195,6 +196,38 @@ function typewrite(el, text, { speed = 22, sound = false } = {}) {
   }, speed);
 }
 
+// ===== 커스텀 툴팁 =====
+const tooltip = (() => {
+  const el = document.createElement("div");
+  el.className = "tooltip";
+  el.innerHTML = `<span class="tooltip__text"></span><span class="tooltip__arrow"></span>`;
+  document.body.appendChild(el);
+  return el;
+})();
+const tooltipText = tooltip.querySelector(".tooltip__text");
+let tooltipTimer = null;
+
+function showTooltipFor(target) {
+  const label = target?.dataset?.tip || target?.getAttribute("aria-label");
+  if (!label) return;
+  tooltipText.textContent = label;
+
+  const r = target.getBoundingClientRect();
+  const x = r.left + r.width / 2;
+  const y = r.top;
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+
+  tooltip.classList.add("show");
+}
+function hideTooltip() {
+  tooltip.classList.remove("show");
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer);
+    tooltipTimer = null;
+  }
+}
+
 // 시작
 startBtn.addEventListener("click", () => {
   loadingEl.classList.add("hidden");
@@ -215,7 +248,6 @@ function initGame() {
   updateText();
   window.addEventListener("resize", () => {
     positionAllToys();
-    // 편지씬에서도 반응형 위치 유지
     if (letterSceneStarted) positionLetterIcon(0.5, 0.6);
   });
 }
@@ -227,14 +259,34 @@ function buildCollectionBar() {
     const el = document.createElement("div");
     el.className = "item-collection__icon";
     el.style.backgroundImage = `url('${def.img}')`;
-    el.title = def.label || key;
-    el.dataset.key = key;
+
+    // 접근성 라벨 & 툴팁 텍스트
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", def.label || key);
+    el.dataset.tip = def.label || key;
+
+    // 탭(눌림) 피드백
     const pressOn = () => el.classList.add("is-pressing");
     const pressOff = () => el.classList.remove("is-pressing");
     el.addEventListener("pointerdown", pressOn);
     el.addEventListener("pointerup", pressOff);
     el.addEventListener("pointerleave", pressOff);
     el.addEventListener("pointercancel", pressOff);
+
+    // 툴팁 이벤트
+    el.addEventListener("mouseenter", () => showTooltipFor(el));
+    el.addEventListener("mouseleave", hideTooltip);
+    el.addEventListener("focus", () => showTooltipFor(el));
+    el.addEventListener("blur", hideTooltip);
+    el.addEventListener(
+      "touchstart",
+      () => {
+        showTooltipFor(el);
+        tooltipTimer = setTimeout(hideTooltip, 1200);
+      },
+      { passive: true }
+    );
+
     collectionBar.appendChild(el);
     collectionIconMap.set(key, el);
   });
@@ -279,17 +331,14 @@ function collectToy(key, el) {
   if (foundCount === totalItems) triggerLetterScene();
 }
 
-// 편지씬 전환 (즉시 아이콘 표시)
+// 편지씬 전환 + 힌트 표시
 let letterSceneStarted = false;
 function triggerLetterScene() {
   if (letterSceneStarted) return;
   letterSceneStarted = true;
 
   collectionBar.classList.add("hidden");
-  // 바로 안내 문구로 교체
-  typewrite(textBar, "편지를 클릭해보세요.", { speed: 26, sound: false });
 
-  // 짧게 페이드 → 배경 전환 → 즉시 편지 아이콘 표시
   mapFader.style.opacity = "1";
   setTimeout(() => {
     map.style.backgroundImage = 'url("bg/letter_map.png")';
@@ -298,11 +347,23 @@ function triggerLetterScene() {
     map.querySelectorAll(".toy").forEach((n) => n.remove());
     mapFader.style.opacity = "0";
 
-    // 길 중앙에 즉시 표시
-    positionLetterIcon(0.5, 0.6);
-    letterIcon.classList.add("show");
-    letterIcon.setAttribute("aria-hidden", "false");
-  }, 180);
+    // 👇 기존 안내 문구 숨기기
+    textBar.style.opacity = "0";
+    textBar.style.visibility = "hidden";
+
+    // ✨ 편지 힌트 띄우기
+    letterHint.classList.add("show");
+    setTimeout(() => {
+      letterHint.classList.remove("show");
+      letterHint.classList.add("hide");
+
+      // 편지 표시 + 안내 문구
+      positionLetterIcon(0.5, 0.6);
+      letterIcon.classList.add("show");
+      letterIcon.setAttribute("aria-hidden", "false");
+      typewrite(textBar, "편지를 클릭해보세요.", { speed: 26, sound: false });
+    }, 2200);
+  }, 300);
 }
 
 function positionLetterIcon(xRatio, yRatio) {
@@ -318,7 +379,7 @@ function updateText() {
   typewrite(textBar, scenarios[step].text, { speed: 22, sound: false });
 }
 
-// 편지 아이콘 → 바로 편지 모달 열기 (게이트 제거)
+// 편지 아이콘 → 바로 편지 모달 열기
 letterIcon.addEventListener("click", openLetter);
 letterIcon.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") {
@@ -335,11 +396,93 @@ function openLetter() {
 closeLetterBtn.addEventListener("click", () => {
   letterModal.classList.remove("show");
   letterModal.setAttribute("aria-hidden", "true");
+  returnToLoading();
 });
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && letterModal.classList.contains("show")) {
     letterModal.classList.remove("show");
     letterModal.setAttribute("aria-hidden", "true");
+    returnToLoading();
   }
 });
+
+function returnToLoading() {
+  // 게임 영역 숨기기
+  appEl.setAttribute("aria-hidden", "true");
+
+  // 편지 아이콘 숨기기
+  letterIcon.classList.remove("show");
+  letterIcon.setAttribute("aria-hidden", "true");
+
+  // 텍스트 초기화
+  textBar.textContent = "";
+
+  // 상태값 초기화
+  letterSceneStarted = false;
+  foundCount = 0;
+
+  // 맵 초기화
+  map.style.backgroundImage = 'url("bg/map.png")';
+  setGlobalBg("bg/map.png");
+  CURRENT_BG_KEY = "bg/map.png";
+
+  // 로딩 화면 다시 표시
+  loadingEl.classList.remove("hidden");
+  loadingEl.classList.remove("ready");
+  startBtn.hidden = false;
+  startBtn.disabled = false;
+
+  // 로딩 텍스트 초기화
+  loadingTitle.textContent = "로딩 완료";
+  loadingText.textContent = "필요한 리소스를 불러오고 있어요 (100%)";
+}
+
+// 로딩 화면으로 완전 복귀 + 0%부터 다시 차오르는 연출
+let reloadTimer = null;
+function returnToLoading() {
+  // 게임 영역/상태 초기화
+  appEl.setAttribute("aria-hidden", "true");
+  letterIcon.classList.remove("show");
+  letterIcon.setAttribute("aria-hidden", "true");
+  textBar.textContent = "";
+  letterSceneStarted = false;
+  foundCount = 0;
+
+  // 맵/배경 초기화
+  map.style.backgroundImage = 'url("bg/map.png")';
+  setGlobalBg("bg/map.png");
+  CURRENT_BG_KEY = "bg/map.png";
+
+  // 로딩 UI 초기화
+  loadingEl.classList.remove("hidden");
+  loadingEl.classList.remove("ready");
+  startBtn.hidden = true;
+  startBtn.disabled = true;
+
+  // 텍스트 0%로 리셋
+  loadingTitle.textContent = "로딩 중…";
+  loadingText.textContent = "필요한 리소스를 불러오고 있어요 (0%)";
+
+  // 기존 재로딩 타이머가 있다면 정리
+  if (reloadTimer) clearInterval(reloadTimer);
+
+  // 0% → 100% 가짜 로딩 연출 (약 2.5초)
+  const DURATION = 2500;
+  const began = performance.now();
+  reloadTimer = setInterval(() => {
+    const t = performance.now() - began;
+    const pct = Math.min(100, Math.floor((t / DURATION) * 100));
+    loadingText.textContent = `필요한 리소스를 불러오고 있어요 (${pct}%)`;
+
+    if (pct >= 100) {
+      clearInterval(reloadTimer);
+      reloadTimer = null;
+      loadingTitle.textContent = "로딩 완료";
+      // 시작 버튼만 중앙에 노출
+      loadingEl.classList.add("ready");
+      startBtn.hidden = false;
+      startBtn.disabled = false;
+    }
+  }, 60);
+}
