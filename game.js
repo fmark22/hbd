@@ -146,7 +146,7 @@ const toyData = {
   lp: {
     img: "assets/lp.png",
     className: "",
-    init: { xRatio: 0.78, yRatio: 0.1 },
+    init: { xRatio: 0.81, yRatio: 0.25 },
     label: "옷장 속에 함참 있던 LP",
   },
 };
