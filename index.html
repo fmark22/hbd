@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>HBD</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="assets/favicon.ico" />
+  </head>
+  <body>
+    <!-- 흐릿한 전역 배경 -->
+    <div id="page-bg" class="page-bg" aria-hidden="true"></div>
+
+    <!-- 로딩/시작 오버레이 -->
+    <div id="loading" aria-live="polite" aria-busy="true">
+      <div class="loading-inner">
+        <div class="spinner" aria-hidden="true"></div>
+        <h1 class="loading-title">로딩 중…</h1>
+        <p id="loading-subtext">필요한 리소스를 불러오고 있어요 (0%)</p>
+        <button id="start-btn" disabled hidden>시작하기</button>
+      </div>
+    </div>
+
+    <!-- 게임 본문 -->
+    <main class="game-wrap" aria-hidden="true" id="app">
+      <!-- 상단 진행 문구 (타자기 효과) -->
+      <header id="text-bar"></header>
+
+      <!-- 지도(풀스크린 배경 레이어) -->
+      <div id="map" role="application" aria-label="Rescue the items map">
+        <div id="map-fader" aria-hidden="true"></div>
+      </div>
+
+      <!-- 하단 아이템 컬렉션 바 (실루엣 형태) -->
+      <div id="collection-bar" aria-label="수집해야 하는 아이템"></div>
+    </main>
+
+    <!-- 편지 아이콘 (두 번째 맵에서 표시) -->
+    <div
+      id="letter-icon"
+      title="편지를 열어보세요"
+      role="button"
+      tabindex="0"
+      aria-label="편지 열기"
+      aria-controls="letter-modal"
+    ></div>
+
+    <!-- 편지 게이트(비번) -->
+    <div
+      id="letter-gate"
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby="gate-title"
+      aria-hidden="true"
+    >
+      <div class="gate-box">
+        <div class="gate-visual">
+          <div class="envelope">
+            <div class="heart h1"></div>
+            <div class="heart h2"></div>
+            <div class="heart h3"></div>
+          </div>
+        </div>
+        <h2 id="gate-title">편지를 열기 위한 비밀 번호</h2>
+        <p class="gate-sub">힌트: 특별한 날 💡</p>
+        <form id="gate-form">
+          <label for="gate-input" class="gate-label">비밀번호</label>
+          <input
+            id="gate-input"
+            autocomplete="one-time-code"
+            inputmode="numeric"
+          />
+          <div class="gate-actions">
+            <button type="submit" class="gate-btn gate-primary">열기</button>
+            <button type="button" id="gate-cancel" class="gate-btn">
+              취소
+            </button>
+          </div>
+          <p id="gate-error" class="gate-error" hidden>
+            올바르지 않아요. 다시 시도해 주세요.
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- 편지 모달 -->
+    <div id="letter-modal" aria-modal="true" role="dialog" aria-hidden="true">
+      <div class="letter-box">
+        <h2 id="letter-title">🎉 지혜님께</h2>
+        <p style="white-space: pre-line; text-align: left">
+          예쁜 지혜님께, 이제는 제가 돌려드릴 말인 것 같네요. <br/>
+          앞으로 다가오는 어려움과 힘든 것들 잘 막아 가며 재밌게 살아봐요! <br />
+          
+          <p>
+          아참, 이행시는 평생
+          못할 예정입니다. 곁에서 좋은 이행시 계속 알려주세요. 
+          </p>
+
+          오늘 맛있는 거 많이 먹고 많이 웃는 나날이 되길 바래요! <br />
+          생일 축하해요🎉 <br />
+          그리고 추석 연휴 잘 보내요오!
+        </p>
+        <button id="close-letter" class="btn">닫기</button>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
