@@ -33,7 +33,7 @@
       <!-- 상단 진행 문구 (타자기 효과) -->
       <header id="text-bar"></header>
 
-      <!-- 지도(풀스크린 배경 레이어) -->
+      <!-- 지도(풀스크린 배경) -->
       <div id="map" role="application" aria-label="Rescue the items map">
         <div id="map-fader" aria-hidden="true"></div>
       </div>
@@ -42,7 +42,7 @@
       <div id="collection-bar" aria-label="수집해야 하는 아이템"></div>
     </main>
 
-    <!-- 편지 아이콘 (두 번째 맵에서 표시) -->
+    <!-- 편지 아이콘 -->
     <div
       id="letter-icon"
       title="편지를 열어보세요"
@@ -52,58 +52,19 @@
       aria-controls="letter-modal"
     ></div>
 
-    <!-- 편지 게이트(비번) -->
-    <div
-      id="letter-gate"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="gate-title"
-      aria-hidden="true"
-    >
-      <div class="gate-box">
-        <div class="gate-visual">
-          <div class="envelope">
-            <div class="heart h1"></div>
-            <div class="heart h2"></div>
-            <div class="heart h3"></div>
-          </div>
-        </div>
-        <h2 id="gate-title">편지를 열기 위한 비밀 번호</h2>
-        <p class="gate-sub">힌트: 특별한 날 💡</p>
-        <form id="gate-form">
-          <label for="gate-input" class="gate-label">비밀번호</label>
-          <input
-            id="gate-input"
-            autocomplete="one-time-code"
-            inputmode="numeric"
-          />
-          <div class="gate-actions">
-            <button type="submit" class="gate-btn gate-primary">열기</button>
-            <button type="button" id="gate-cancel" class="gate-btn">
-              취소
-            </button>
-          </div>
-          <p id="gate-error" class="gate-error" hidden>
-            올바르지 않아요. 다시 시도해 주세요.
-          </p>
-        </form>
-      </div>
-    </div>
-
     <!-- 편지 모달 -->
     <div id="letter-modal" aria-modal="true" role="dialog" aria-hidden="true">
       <div class="letter-box">
-        <h2 id="letter-title">🎉 지혜님께</h2>
-        <p style="white-space: pre-line; text-align: left">
-          예쁜 지혜님께, 이제는 제가 돌려드릴 말인 것 같네요. <br/>
-          앞으로 다가오는 어려움과 힘든 것들 잘 막아 가며 재밌게 살아봐요! <br />
-          
-          <p>
-          아참, 이행시는 평생
-          못할 예정입니다. 곁에서 좋은 이행시 계속 알려주세요. 
-          </p>
-
-          오늘 맛있는 거 많이 먹고 많이 웃는 나날이 되길 바래요! <br />
+        <h3 id="letter-title">지혜님께</h3>
+        <p>
+          예쁜 지혜님께, 많은 말이 있지만, 짧게 줄여서 돌려드릴 말만 전달드리고
+          갑니다ㅎㅎ <br />
+          제가 늘 감사합니다. 그리고 앞으로 다가오는 어려움이나 힘든 것들 잘
+          막아 가며 재밌게 살아봐요!
+          <br />
+          아참, 이행시는 평생 못할 예정입니다. 곁에서 좋은 이행시 계속
+          알려주세요. <br />
+          앞으로 맛있는 거 많이 먹고 많이 웃는 나날이 되길 바래요! <br />
           생일 축하해요🎉 <br />
           그리고 추석 연휴 잘 보내요오!
         </p>

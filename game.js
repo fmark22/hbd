@@ -16,20 +16,12 @@ const closeLetterBtn = document.getElementById("close-letter");
 const loadingTitle = document.querySelector(".loading-title");
 const loadingText = document.getElementById("loading-subtext");
 
-// Gate(비번)
-const letterGate = document.getElementById("letter-gate");
-const gateForm = document.getElementById("gate-form");
-const gateInput = document.getElementById("gate-input");
-const gateCancel = document.getElementById("gate-cancel");
-const gateError = document.getElementById("gate-error");
-const PASSCODE_PLAIN = "0825";
-
 // ===== 전역 배경 동기화 =====
 function setGlobalBg(url) {
   document.documentElement.style.setProperty("--page-bg-url", `url("${url}")`);
 }
 
-// ===== 에셋 프리로드 + 가짜 프로그레스(0→100%) + 최소 5초 =====
+// ===== 에셋 프리로드 + 가짜 프로그레스 =====
 const ASSETS = [
   "bg/map.png",
   "bg/letter_map.png",
@@ -42,16 +34,15 @@ const ASSETS = [
   "assets/sfx/type.wav",
 ];
 
-const MIN_LOADING_MS = 5000; // 최소 5초
+const MIN_LOADING_MS = 5000;
 const loadStart = performance.now();
 let assetsDone = false;
 let fakeProgress = 0;
 
-// cover 보정용 이미지 원본 크기 기록
 const IMAGE_DIMS = new Map(); // src -> {w,h}
 let CURRENT_BG_KEY = "bg/map.png";
 
-// 0→100% 자연스러운 증가
+// 진행 퍼센트 표시
 const progressTimer = setInterval(() => {
   const target = assetsDone ? 100 : 95;
   fakeProgress += (target - fakeProgress) * 0.1 + Math.random() * 0.8;
@@ -62,7 +53,6 @@ const progressTimer = setInterval(() => {
   loadingText.textContent = `필요한 리소스를 불러오고 있어요 (${pct}%)`;
 }, 110);
 
-// 프리로드
 preloadAssets(ASSETS, () => {}, onAssetsDone);
 function preloadAssets(list, onProgress, onDone) {
   let loaded = 0;
@@ -91,7 +81,6 @@ function preloadAssets(list, onProgress, onDone) {
     } else step();
   });
 }
-
 function onAssetsDone() {
   assetsDone = true;
   const elapsed = performance.now() - loadStart;
@@ -116,25 +105,24 @@ function onAssetsDone() {
   }, remain);
 }
 
-// ===== 배경이미지(cover) 좌표 변환 유틸 =====
+// ===== cover 좌표 변환 =====
 function imagePointToContainerXY({ xRatio, yRatio }, containerRect, imgSrc) {
   const dims = IMAGE_DIMS.get(imgSrc);
-  if (!dims) {
+  if (!dims)
     return {
       x: containerRect.width * xRatio,
       y: containerRect.height * yRatio,
     };
-  }
   const { w: iw, h: ih } = dims;
   const scale = Math.max(containerRect.width / iw, containerRect.height / ih);
-  const rw = iw * scale;
-  const rh = ih * scale;
+  const rw = iw * scale,
+    rh = ih * scale;
   const offsetX = (containerRect.width - rw) / 2;
   const offsetY = (containerRect.height - rh) / 2;
   return { x: offsetX + rw * xRatio, y: offsetY + rh * yRatio };
 }
 
-// ===== 데이터: 비율 좌표 (map.png 하얀 점 위치 반영) =====
+// ===== 아이템 좌표(비율) =====
 const toyData = {
   cake: {
     img: "assets/cake.png",
@@ -157,7 +145,7 @@ const toyData = {
   lp: {
     img: "assets/lp.png",
     className: "",
-    init: { xRatio: 0.84, yRatio: 0.1 },
+    init: { xRatio: 0.78, yRatio: 0.1 },
     label: "LP",
   },
 };
@@ -173,7 +161,7 @@ const scenarios = [
   { required: 4, text: "모두 찾았어요! 대단해요! 🎉" },
 ];
 
-// ===== 타자기 효과 =====
+// 타자기 효과
 let typeTimer = null;
 let typeSfx;
 try {
@@ -207,28 +195,29 @@ function typewrite(el, text, { speed = 22, sound = false } = {}) {
   }, speed);
 }
 
-// ===== 시작 버튼 =====
+// 시작
 startBtn.addEventListener("click", () => {
   loadingEl.classList.add("hidden");
   appEl.setAttribute("aria-hidden", "false");
   initGame();
 });
 
-// ===== 초기화 =====
+// 초기화
 const collectionIconMap = new Map();
-let toyElements = {}; // key -> DOM
-
+let toyElements = {};
 function initGame() {
   setGlobalBg("bg/map.png");
   CURRENT_BG_KEY = "bg/map.png";
   foundCount = 0;
-
   buildCollectionBar();
   spawnAllToys();
   positionAllToys();
   updateText();
-
-  window.addEventListener("resize", positionAllToys);
+  window.addEventListener("resize", () => {
+    positionAllToys();
+    // 편지씬에서도 반응형 위치 유지
+    if (letterSceneStarted) positionLetterIcon(0.5, 0.6);
+  });
 }
 
 function buildCollectionBar() {
@@ -240,15 +229,12 @@ function buildCollectionBar() {
     el.style.backgroundImage = `url('${def.img}')`;
     el.title = def.label || key;
     el.dataset.key = key;
-
-    // 눌림 피드백
     const pressOn = () => el.classList.add("is-pressing");
     const pressOff = () => el.classList.remove("is-pressing");
     el.addEventListener("pointerdown", pressOn);
     el.addEventListener("pointerup", pressOff);
     el.addEventListener("pointerleave", pressOff);
     el.addEventListener("pointercancel", pressOff);
-
     collectionBar.appendChild(el);
     collectionIconMap.set(key, el);
   });
@@ -262,91 +248,61 @@ function spawnAllToys() {
     el.src = toy.img;
     el.className = `toy ${toy.className || ""}`.trim();
     el.dataset.key = key;
-    el.setAttribute("role", "button");
-    el.setAttribute("tabindex", "0");
-    el.setAttribute("aria-label", `${toy.label || key} 찾기`);
     el.addEventListener("click", () => collectToy(key, el));
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        collectToy(key, el);
-      }
-    });
     map.appendChild(el);
     toyElements[key] = el;
   });
 }
 
-function getSafeBottom() {
-  const rectBar = collectionBar.getBoundingClientRect?.();
-  return Math.ceil(rectBar?.height || 100) + 16; // 여유 16px
-}
-
 function positionAllToys() {
   const rect = map.getBoundingClientRect();
-  const SAFE_BOTTOM = getSafeBottom();
+  const SAFE_BOTTOM = 110;
   Object.entries(toyData).forEach(([key, toy]) => {
     const el = toyElements[key];
     if (!el) return;
-    const pt = imagePointToContainerXY(
-      { xRatio: toy.init.xRatio, yRatio: toy.init.yRatio },
-      rect,
-      CURRENT_BG_KEY
-    );
-    let L = Math.round(pt.x);
-    let T = Math.round(pt.y);
+    const pt = imagePointToContainerXY(toy.init, rect, CURRENT_BG_KEY);
+    let L = Math.round(pt.x),
+      T = Math.round(pt.y);
     if (T > rect.height - SAFE_BOTTOM) T = rect.height - SAFE_BOTTOM;
     el.style.left = `${L}px`;
     el.style.top = `${T}px`;
   });
 }
 
-// ===== 수집 처리 =====
+// 수집
 function collectToy(key, el) {
   if (el.classList.contains("found")) return;
   el.classList.add("found");
-  const icon = collectionIconMap.get(key);
-  if (icon) icon.classList.add("is-collected");
-
+  collectionIconMap.get(key)?.classList.add("is-collected");
   foundCount++;
   updateText();
   if (foundCount === totalItems) triggerLetterScene();
 }
 
-// ===== 스토리 → 배경 전환 → 편지 아이콘 =====
+// 편지씬 전환 (즉시 아이콘 표시)
 let letterSceneStarted = false;
 function triggerLetterScene() {
   if (letterSceneStarted) return;
   letterSceneStarted = true;
 
   collectionBar.classList.add("hidden");
-  typewrite(textBar, "근데, 중요한 하나를 잃어버리는데…", {
-    speed: 28,
-    sound: false,
-  });
+  // 바로 안내 문구로 교체
+  typewrite(textBar, "편지를 클릭해보세요.", { speed: 26, sound: false });
 
+  // 짧게 페이드 → 배경 전환 → 즉시 편지 아이콘 표시
+  mapFader.style.opacity = "1";
   setTimeout(() => {
-    mapFader.style.opacity = "1";
-    setTimeout(() => {
-      map.style.backgroundImage = 'url("bg/letter_map.png")';
-      setGlobalBg("bg/letter_map.png");
-      CURRENT_BG_KEY = "bg/letter_map.png";
-      map.querySelectorAll(".toy").forEach((n) => n.remove());
-      setTimeout(() => {
-        mapFader.style.opacity = "0";
-        setTimeout(() => {
-          typewrite(textBar, "편지를 클릭해보세요.", {
-            speed: 26,
-            sound: false,
-          });
-          // 편지 아이콘을 의도한 좌표(하얀점)에 배치 (비율: 이전 요청값)
-          positionLetterIcon(0.79, 0.68);
-          letterIcon.classList.add("show");
-          letterIcon.setAttribute("aria-hidden", "false");
-        }, 350);
-      }, 80);
-    }, 450);
-  }, 900);
+    map.style.backgroundImage = 'url("bg/letter_map.png")';
+    setGlobalBg("bg/letter_map.png");
+    CURRENT_BG_KEY = "bg/letter_map.png";
+    map.querySelectorAll(".toy").forEach((n) => n.remove());
+    mapFader.style.opacity = "0";
+
+    // 길 중앙에 즉시 표시
+    positionLetterIcon(0.5, 0.6);
+    letterIcon.classList.add("show");
+    letterIcon.setAttribute("aria-hidden", "false");
+  }, 180);
 }
 
 function positionLetterIcon(xRatio, yRatio) {
@@ -356,57 +312,34 @@ function positionLetterIcon(xRatio, yRatio) {
   letterIcon.style.top = `${pt.y}px`;
 }
 
-// ===== 상단 텍스트 =====
+// 상단 텍스트
 function updateText() {
   const step = Math.min(foundCount, scenarios.length - 1);
   typewrite(textBar, scenarios[step].text, { speed: 22, sound: false });
 }
 
-// ===== 편지 아이콘 → 게이트 → 편지 모달 =====
-letterIcon.addEventListener("click", () => {
-  letterGate.classList.add("show");
-  letterGate.setAttribute("aria-hidden", "false");
-  gateInput.focus();
-});
+// 편지 아이콘 → 바로 편지 모달 열기 (게이트 제거)
+letterIcon.addEventListener("click", openLetter);
 letterIcon.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    letterGate.classList.add("show");
-    letterGate.setAttribute("aria-hidden", "false");
-    gateInput.focus();
+    openLetter();
   }
 });
 
-gateForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const val = (gateInput.value || "").trim();
-  if (val === PASSCODE_PLAIN) {
-    gateError.hidden = true;
-    letterGate.classList.remove("show");
-    letterGate.setAttribute("aria-hidden", "true");
-    letterModal.classList.add("show");
-    letterModal.setAttribute("aria-hidden", "false");
-  } else {
-    gateError.hidden = false;
-    gateInput.select();
-  }
-});
-gateCancel?.addEventListener("click", () => {
-  letterGate.classList.remove("show");
-  letterGate.setAttribute("aria-hidden", "true");
-});
+function openLetter() {
+  letterModal.classList.add("show");
+  letterModal.setAttribute("aria-hidden", "false");
+}
+
 closeLetterBtn.addEventListener("click", () => {
   letterModal.classList.remove("show");
   letterModal.setAttribute("aria-hidden", "true");
 });
+
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    if (letterModal.classList.contains("show")) {
-      letterModal.classList.remove("show");
-      letterModal.setAttribute("aria-hidden", "true");
-    } else if (letterGate.classList.contains("show")) {
-      letterGate.classList.remove("show");
-      letterGate.setAttribute("aria-hidden", "true");
-    }
+  if (e.key === "Escape" && letterModal.classList.contains("show")) {
+    letterModal.classList.remove("show");
+    letterModal.setAttribute("aria-hidden", "true");
   }
 });
